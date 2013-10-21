@@ -1,0 +1,45 @@
+[file_prefs]
+final_new_line=true
+ensure_convert_new_lines=false
+strip_trailing_spaces=false
+replace_tabs=false
+
+[indentation]
+indent_width=4
+indent_type=1
+indent_hard_tab_width=8
+detect_indent=false
+detect_indent_width=false
+indent_mode=2
+
+[project]
+name=tempDisplay
+base_path=/home/tri/source/tempDisplay
+description=
+file_patterns=
+
+[long line marker]
+long_line_behaviour=1
+long_line_column=72
+
+[files]
+current_page=0
+FILE_NAME_0=299;Make;0;16;1;1;0;%2Fhome%2Ftri%2Fsource%2FtempDisplay%2FMakefile;0;4
+FILE_NAME_1=331;C;0;16;1;1;0;%2Fhome%2Ftri%2Fsource%2FtempDisplay%2FtempDisplay.c;0;4
+
+[VTE]
+last_dir=/home/tri
+
+[build-menu]
+NF_00_LB=メイク(_M)
+NF_00_CM=make
+NF_00_WD=/home/tri/source/tempDisplay
+NF_01_LB=カスタム ターゲットをメイク(_T)
+NF_01_CM=make 
+NF_01_WD=/home/tri/source/tempDisplay
+NF_02_LB=オブジェクトをメイク(_O)
+NF_02_CM=make %e.o
+NF_02_WD=/home/tri/source/tempDisplay
+EX_00_LB=実行(_E)
+EX_00_CM=./%e
+EX_00_WD=/home/tri/source/tempDisplay
