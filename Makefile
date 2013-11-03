@@ -17,3 +17,4 @@ lib_mcp3002.o: /home/tri/source/lib/lib_mcp3002.h
 lib_ST7032i.o: /home/tri/source/lib/lib_ST7032i.h
 test_spiDisplay.c: /home/tri/source/lib/lib_ST7032i.h
 lib_mpl115a2.o: /home/tri/source/lib/lib_mpl115a2.h       
+tempDisplay.o:	/home/tri/source/tempDisplay/tempDisplay.h
