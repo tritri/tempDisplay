@@ -1,9 +1,9 @@
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <mysql.h> 
 #include <string.h>
 #include <time.h>
+#include <pthread.h>
 #include <unistd.h>
 #include <linux/i2c-dev.h>
 #include <fcntl.h>
@@ -16,6 +16,7 @@
 #include <wiringPi.h>
 #include <wiringPiSPI.h>
 #include "../lib/lib_mcp3002.h"
+#include "../lib/lib_mpl115a2.h"
 #include "../lib/lib_ST7032i.h"
 
 
@@ -37,8 +38,10 @@
 void insertRecordTemperatureTable(MYSQL *mysql,int id,char *datetime,double temp,double pres);
 void getRecord(MYSQL *conn);
 void getLastRecordGPIO(MYSQL *conn, bool *gpio22,bool *gpio23,bool *gpio24);
-void readMPL115A2(int fp,unsigned char bufPresData[]);
-double calcPressure(int fp);
+void *thread_function1( void *ptr );
+
+//void readMPL115A2(int fp,unsigned char bufPresData[]);
+//double calcPressure(int fp);
 
 int main(int argc, char **argv)
 {
@@ -71,7 +74,14 @@ int main(int argc, char **argv)
     lcdFlag=false;
       printf("LCD Off!!\n");
 }
-  
+  /*
+  //スレッド処理
+  pthread_t thread1, thread2;
+  useconds_t tick1 = 200000;
+  pthread_create( &thread1, NULL, thread_function1, (void *) &tick1);     
+  pthread_join( thread1, NULL);
+  */
+
 //GPIOセットアップ(LED点灯)
   if (wiringPiSetup() == -1)
     return 1;
@@ -198,6 +208,8 @@ if (!mysql) //← 変数mysqlには接続確立時はMYSQL*接続ハンドル,�
  double tmpPressure;
  idCounter=0;
  time(&before_time);
+ 
+ int lightLux=0;
   //ループ
   while (1)
     {
@@ -229,12 +241,33 @@ if (!mysql) //← 変数mysqlには接続確立時はMYSQL*接続ハンドル,�
       digitalWrite(BLUEPIN, gpio22); 
       digitalWrite(GREENPIN, gpio23); 
       digitalWrite(REDPIN, gpio24);
+      
+      if(lightLux>1024){
+	lightLux=0;
+      }else{
+	lightLux++;
+      }
+      //printf("%d\n",lightLux);
+      int i;
+      for(i=0;i<1024;i++){
+	if(i >lightLux){
+	  digitalWrite(REDPIN, false); 
+	}else{
+	  digitalWrite(REDPIN, true); 
+	}
 
-
-  
+      }
     }
 
   return 0;
+}
+void *thread_function1(void *ptr){
+  useconds_t tick = *( int * )ptr;
+ 
+  while(1){
+    printf("function1\n");
+    usleep(tick);
+  }
 }
 void getLastRecordGPIO(MYSQL *conn, bool *gpio22,bool *gpio23,bool *gpio24)
 {
@@ -332,6 +365,7 @@ void insertRecordTemperatureTable(MYSQL *mysql,int id,char *datetime,double temp
 	printf("\n");
 	mysql_query(mysql,query);
 }
+/*
 void readMPL115A2(int pres, unsigned char bufPresData[])
 {
   unsigned char bufPresCmd[2];
@@ -352,8 +386,9 @@ void readMPL115A2(int pres, unsigned char bufPresData[])
     if(read(pres,bufPresData,12)!=12){
       printf("Error reading to i2c\n");
     }
-}
-
+    }
+*/
+/*
 double calcPressure(int fp)
 {
   int i;
@@ -371,9 +406,9 @@ double calcPressure(int fp)
   for(i=0;i<maxNum;i++){
     
     readMPL115A2(fp,bufPresData);
-  /*
-    printf("%x %x %x %x %x %x %x %x %x %x %x %x\n",(int)bufPresData[0],(int)bufPresData[1],bufPresData[2],bufPresData[3],bufPresData[4],bufPresData[5],bufPresData[6],bufPresData[7],bufPresData[8],bufPresData[9],bufPresData[10],bufPresData[11]);
-  */
+  //
+  //  printf("%x %x %x %x %x %x %x %x %x %x %x %x\n",(int)bufPresData[0],(int)bufPresData[1],bufPresData[2],bufPresData[3],bufPresData[4],bufPresData[5],bufPresData[6],bufPresData[7],bufPresData[8],bufPresData[9],bufPresData[10],bufPresData[11]);
+  
     Pressure=((bufPresData[0] * 256 ) + bufPresData[1]) / 64 ;
     Temp=((bufPresData[2] * 256 ) + bufPresData[3]) / 64 ;
     a0=(bufPresData[4]<<5) + (bufPresData[5]>>3)+(bufPresData[5] & (0x07))/8.0;
@@ -388,12 +423,13 @@ double calcPressure(int fp)
   printf("Pressure=%f Temp=%f a0=%f b1=%f b2=%f c12=%f\n",Pressure,Temp,a0,b1,b2,c12);
   ret=Avg/maxNum;
     //printf("Pressure(hPa)=%f\n",ret);
-    /*
-    double h ;
-    double Difference=80;// 自宅でのセンサと実際の高度差補正値(My自宅の標高は100m)
-    h = 44330.8 * (1.0 - pow( (ret/1013.25) ,  0.190263 )) ;
-    h = h + Difference ;
-    printf("height=%f\n",h);
-    */
+    
+    //double h ;
+    //double Difference=80;// 自宅でのセンサと実際の高度差補正値(My自宅の標高は100m)
+    //h = 44330.8 * (1.0 - pow( (ret/1013.25) ,  0.190263 )) ;
+    //h = h + Difference ;
+    //printf("height=%f\n",h);
+    
     return ret;
 }
+*/
