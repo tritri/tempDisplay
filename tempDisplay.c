@@ -149,81 +149,19 @@ if (!mysql) //← 変数mysqlには接続確立時はMYSQL*接続ハンドル,�
   return (-1);
 }
 //ここまで----------------------------------------------------
-
-
-
- printf("thread Start\n");  
+   
   //スレッド処理
-  pthread_t thread1, thread2;
+ printf("thread Start\n"); 
+ pthread_t thread1, thread2;
   useconds_t tick1 = 200000;
   pthread_create( &thread1, NULL, thread_ledLoop, (void *) &tick1);     
   pthread_create( &thread2, NULL, thread_DBLoop, (void *) &pres);     
+  
   pthread_join( thread1, NULL);
   pthread_join( thread2, NULL);
+  
   pthread_mutex_destroy(&mutex);
 
-
- /*//以下単純にポーリングでの処理
- bool gpio22=true;
- bool gpio23=true;
- bool gpio24=true;
- double tmpTemperature;
- double tmpPressure;
- idCounter=0;
- time(&before_time);
- 
- int lightLux=0;
- 
-
-  //ループ
-  while (1)
-    {
-      if(lcdFlag){
-	sprintf(strDisp,"%f",getTemperature(0));
-	//printf("Temperature= %f(℃)",getTemperature(0));
-	//printf("%s", *dispStatusTemp(0));
-	LCD_setCursor(5, 1, lcd);
-	LCD_puts(strDisp, lcd);
-      }
-      //mysqlレコード追加
-      time(&current_time);
-      sec_time=difftime(current_time,before_time);
-      if(sec_time>1.0)
-      {
-	tmpTemperature=getTemperature(0);
-	tmpPressure=calcPressure(pres);
-	before_time=current_time;
-	//printf("\n%f(s)",sec_time);
-	idCounter++;
-	date=localtime(&current_time);
-	strftime(strDate,255,"%Y-%m-%d %H:%M:%S",date);
-	printf("%s Temp(℃)%f Pressure(hPa)%f\n",strDate,tmpTemperature,tmpPressure);
-	insertRecordTemperatureTable(mysql,idCounter,strDate,tmpTemperature,tmpPressure);    
-      }
-      //LED点灯
-      getLastRecordGPIO(mysql,&gpio22,&gpio23,&gpio24);
-
-      digitalWrite(BLUEPIN, gpio22); 
-      digitalWrite(GREENPIN, gpio23); 
-      digitalWrite(REDPIN, gpio24);
-      
-      if(lightLux>1024){
-	lightLux=0;
-      }else{
-	lightLux++;
-      }
-      //printf("%d\n",lightLux);
-      int i;
-      for(i=0;i<1024;i++){
-	if(i >lightLux){
-	  digitalWrite(REDPIN, false); 
-	}else{
-	  digitalWrite(REDPIN, true); 
-	}
-
-      }
-    }
-  */
   return 0;
 }
 
@@ -280,36 +218,88 @@ void *thread_DBLoop(void *ptr){
       nanosleep(&ts,NULL);//1msスリープ
   }
 }
+//LED色を決定、rgbそれぞれにOn時間を指定します
+void rgbPoling(int r,int g,int b){
+  //スリープ時間を指定
+  struct timespec ts;
+  ts.tv_sec=0;//1sを指定
+  ts.tv_nsec=1000000;//0nsを指定
+
+  int i,j;
+  for(j=0;j<4;j++){
+    for(i=0;i<1024;i++){
+      if(i >r){
+	digitalWrite(REDPIN, false); 
+      }else{
+	digitalWrite(REDPIN, true); 
+      }
+      if(i >g){
+	digitalWrite(GREENPIN, false); 
+      }else{
+	digitalWrite(GREENPIN, true); 
+      }
+      if(i >b){
+	digitalWrite(BLUEPIN, false); 
+      }else{
+	digitalWrite(BLUEPIN, true); 
+      }	
+    }
+  }
+  nanosleep(&ts,NULL);//1msスリープ
+
+}
+
 void *thread_ledLoop(void *ptr){
   useconds_t tick = *( int * )ptr;
-  int lightLux=0;
+  bool flagR=true,flagG=true,flagB=true;
+  int counter=0,rlux=0,glux=0,blux=0;
+  int currentFlag=0x01,beforeFlag=0x00,calcData=0x00;
   //スリープ時間を指定
   struct timespec ts;
   ts.tv_sec=0;//1sを指定
   ts.tv_nsec=1000000;//0nsを指定
  
   while(1){
-      if(lightLux>1024){
-	lightLux=0;
-      }else{
-	lightLux++;
-      }
+    calcData=(currentFlag & 0x01)-(beforeFlag & 0x01);
+    if(calcData<0){
+      rlux--;
+    }else if(calcData==0){
+      ;
+    }else{
+      rlux++;
+    }
+    calcData=(currentFlag & 0x02)-(beforeFlag & 0x02);
+    if(calcData<0){
+      glux--;
+    }else if(calcData==0){
+      ;
+    }else{
+      glux++;
+    }
+    calcData=(currentFlag & 0x04)-(beforeFlag & 0x04);
+    if(calcData<0){
+      blux--;
+    }else if(calcData==0){
+      ;
+    }else{
+      blux++;
+    }
+    //printf("calcData=%d,currentData=%d,beforeData=%d,rlux=%d \r",calcData,currentFlag & 0x01,beforeFlag & 0x01,glux);
+    //printf("R=%d,G=%d,B=%d \r",rlux,glux,blux);
+    if(counter>1024){
+      counter=0;
+      beforeFlag=currentFlag;
+      currentFlag++;
+    }else{
+      counter++;
+    }
+    
       //printf("%d\n",lightLux);
-      int i,j;
-      for(j=0;j<4;j++){
-	for(i=0;i<1024;i++){
-	  if(i >lightLux){
-	    digitalWrite(REDPIN, false); 
-	  }else{
-	    digitalWrite(REDPIN, true); 
-	  }
-	
-	}
-      }
-      nanosleep(&ts,NULL);//1msスリープ
-
+      //rgbPoling(0,glux,0);
+      rgbPoling(rlux,glux,blux);
   }
 }
+
 void getLastRecordGPIO(MYSQL *conn, bool *gpio22,bool *gpio23,bool *gpio24)
 {
 
