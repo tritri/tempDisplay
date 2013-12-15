@@ -148,6 +148,9 @@ if (!mysql) //← 変数mysqlには接続確立時はMYSQL*接続ハンドル,�
 	 MYSQL_USERNAME ? MYSQL_USERNAME : "");
   return (-1);
 }
+
+//insertRecordCaptureTable(mysql,"2013-12-15 12:50:00","/var/www/tank.jpg");
+//exit(1);
 //ここまで----------------------------------------------------
 
   //スレッド処理
@@ -175,17 +178,148 @@ void *thread_captureLoop(void *ptr){
   char *fileStr="/var/www/tank.jpg";
   capture=initCap();
 
+  time_t current_time;//時間計測用構造体
+  struct tm *date;
+  char strDate[256];
+
   //スリープ時間を指定
   struct timespec ts;
-  ts.tv_sec=30;//30sを指定
+  ts.tv_sec=600;//600sを指定
   ts.tv_nsec=0;//0nsを指定
  
   while(1){
+    time(&current_time);
+    date=localtime(&current_time);
+    strftime(strDate,255,"%Y-%m-%d %H:%M:%S",date);
+
     saveCap(capture,fileStr);
+    
+    pthread_mutex_lock(&mutex);
+    insertRecordCaptureTable(mysql,strDate,fileStr);
+    pthread_mutex_unlock(&mutex);
+    
     nanosleep(&ts,NULL);//1msスリープ
+
   }
 }
 
+//captureテーブルへ画像レコードを書き込みます
+//datetime：日時の文字列（例"2013-1-1 1:33:22")
+//filepath：画像ファイルパス
+void insertRecordCaptureTable(MYSQL *con,char *datetime,char *filepath)
+{
+
+	FILE *fp = fopen(filepath, "rb");
+	//ファイルが存在するかどうか
+	if (fp == NULL) 
+	  {
+	    fprintf(stderr, "cannot open image file\n");    
+	    exit(1);
+	  }
+	//ファイルポインタがファイル終端を示すことができるか
+	fseek(fp, 0, SEEK_END);
+	if (ferror(fp)) {
+      
+	  fprintf(stderr, "fseek() failed\n");
+	  int r = fclose(fp);
+
+	  if (r == EOF) {
+	    fprintf(stderr, "cannot close file handler\n");          
+	  }    
+      
+	  exit(1);
+	}  
+	
+	//ファイル位置を取得できるか否か
+	int flen = ftell(fp);
+  
+	if (flen == -1) {
+      
+	  perror("error occured");
+	  int r = fclose(fp);
+
+	  if (r == EOF) {
+	    fprintf(stderr, "cannot close file handler\n");
+	  }
+      
+	  exit(1);      
+	}
+	//ファイルポインタが先頭を示すことができるか
+	fseek(fp, 0, SEEK_SET);
+  
+	if (ferror(fp)) {
+      
+	  fprintf(stderr, "fseek() failed\n");
+	  int r = fclose(fp);
+
+	  if (r == EOF) {
+	    fprintf(stderr, "cannot close file handler\n");
+	  }    
+      
+	  exit(1);
+	}
+	//ファイルサイズの取得
+	char data[flen+1];
+
+	int size = fread(data, 1, flen, fp);
+  
+	if (ferror(fp)) {
+      
+	  fprintf(stderr, "fread() failed\n");
+	  int r = fclose(fp);
+
+	  if (r == EOF) {
+	    fprintf(stderr, "cannot close file handler\n");
+	  }
+      
+	  exit(1);      
+	}
+  
+	int r = fclose(fp);
+
+	if (r == EOF) {
+	  fprintf(stderr, "cannot close file handler\n");
+	}
+
+	//dateからchunkへ画像データをMysqlのバイナリに変換します
+	char chunk[2*size+1];
+	mysql_real_escape_string(con, chunk, data, size);
+
+	//クエリ文字列を作成します
+	char *st = "INSERT INTO capture(savetime, graphic) VALUES(cast('%1s' as datetime), '%s')";
+	
+	size_t st_len = strlen(st);
+	char query[st_len + 2 * size+1]; 
+
+	//クエリ文字列を結合します
+	int len = snprintf(query, st_len + 2*size +1, st ,datetime, chunk);
+	
+	//クエリをDBへ送ります
+	int errorCode;
+	errorCode= mysql_real_query(con, query, len);
+	switch(errorCode){
+	case 0:
+	printf("データ保存 ok! 返り値=%d\n",errorCode);
+	break;
+	case 1:
+	printf("データ保存 NG! 返り値=%d\n",errorCode);
+	break;
+	  /*
+	case CR_COMMANDS_OUT_OF_SYNC:
+	  printf("CR_COMMANDS_OUT_OF_SYNC\n");
+	  break;
+	case CR_SERVER_GONE_ERROR:
+	  printf("CR_SERVER_GONE_ERROR\n");
+	  break;
+	case CR_SERVER_LOST:
+	  printf("CR_SERVER_LOST\n");
+	  break;
+	case CR_UNKNOWN_ERROR:
+	  printf("CR_UNKNOWN_ERROR\m");
+	  break;*/
+	}
+
+}
 
 
 //DBアクセス用スレッドループ
@@ -210,7 +344,6 @@ void *thread_DBLoop(void *ptr){
 
   time(&before_time);
   while(1){
-  
         //mysqlレコード追加
       time(&current_time);
       sec_time=difftime(current_time,before_time);

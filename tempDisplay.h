@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <mysql.h> 
+#include <errmsg.h>
 #include <string.h>
 #include <time.h>
 #include <pthread.h>
@@ -41,6 +42,10 @@
 void insertRecordTemperatureTable(MYSQL *mysql,int id,char *datetime,double temp,double pres);
 void getRecord(MYSQL *conn);
 void getLastRecordGPIO(MYSQL *conn, bool *gpio22,bool *gpio23,bool *gpio24);
+//captureテーブルへ画像レコードを書き込みます
+//datetime：日時の文字列（例"2013-1-1 1:33:22")
+//filepath：画像ファイルパス
+void insertRecordCaptureTable(MYSQL *con,char *datetime,char *filepath);
 
 //スレッドループ処理：LED
 void *thread_ledLoop( void *ptr );
