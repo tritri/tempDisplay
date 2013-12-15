@@ -2,7 +2,7 @@
 
 int main(int argc, char **argv)
 {
-  int lcd;       // ファイルディスクリプタ:LCD
+  int lcd;       // ファイルディスクリプタ:LCD1
   int pres;      //ファイルディスクリプタ:MPL115A2（大気圧センサ）
   char *i2cFileName = "/dev/i2c-1"; // I2Cドライバファイル名
   char strDisp[100];
@@ -149,21 +149,44 @@ if (!mysql) //← 変数mysqlには接続確立時はMYSQL*接続ハンドル,�
   return (-1);
 }
 //ここまで----------------------------------------------------
-   
+
   //スレッド処理
  printf("thread Start\n"); 
- pthread_t thread1, thread2;
+ pthread_t thread1, thread2, thread3;
   useconds_t tick1 = 200000;
   pthread_create( &thread1, NULL, thread_ledLoop, (void *) &tick1);     
   pthread_create( &thread2, NULL, thread_DBLoop, (void *) &pres);     
-  
+  pthread_create( &thread3, NULL, thread_captureLoop, (void *) &tick1);
+     
   pthread_join( thread1, NULL);
   pthread_join( thread2, NULL);
-  
+  pthread_join( thread3, NULL);
+
   pthread_mutex_destroy(&mutex);
 
   return 0;
 }
+
+
+void *thread_captureLoop(void *ptr){
+
+  //カメラからの画像キャプチャ
+  CvCapture *capture = 0;  
+  char *fileStr="/var/www/tank.jpg";
+  capture=initCap();
+
+  //スリープ時間を指定
+  struct timespec ts;
+  ts.tv_sec=30;//30sを指定
+  ts.tv_nsec=0;//0nsを指定
+ 
+  while(1){
+    saveCap(capture,fileStr);
+    nanosleep(&ts,NULL);//1msスリープ
+  }
+}
+
+
 
 //DBアクセス用スレッドループ
 //1sごとのポーリングを行います

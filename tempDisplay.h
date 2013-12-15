@@ -21,7 +21,7 @@
 #include "../lib/lib_mcp3002.h"
 #include "../lib/lib_mpl115a2.h"
 #include "../lib/lib_ST7032i.h"
-
+#include "../lib/lib_capture.h"
 
 
 #define MYSQL_SERVER "127.0.0.1" 
@@ -45,6 +45,7 @@ void getLastRecordGPIO(MYSQL *conn, bool *gpio22,bool *gpio23,bool *gpio24);
 //スレッドループ処理：LED
 void *thread_ledLoop( void *ptr );
 void *thread_DBLoop( void *ptr );
+void *thread_captureLoop(void *ptr);
 pthread_mutex_t mutex;
 pthread_cond_t cond;
 
