@@ -40,9 +40,11 @@ int main(int argc, char **argv)
   pinMode(GREENPIN, OUTPUT);
   pinMode(REDPIN, OUTPUT);
   pinMode(BLUEPIN, OUTPUT);
+  pinMode(RELAYPIN, OUTPUT);
   digitalWrite(BLUEPIN, 0); 
   digitalWrite(GREENPIN, 0); 
   digitalWrite(REDPIN, 0);
+  digitalWrite(RELAYPIN, 0);
   
   if(lcdFlag){
     // I2CポートをRead/Write属性でオープン。ファイルディスクリプタ取得:lcd
@@ -184,7 +186,7 @@ void *thread_captureLoop(void *ptr){
 
   //スリープ時間を指定
   struct timespec ts;
-  ts.tv_sec=600;//600sを指定
+  ts.tv_sec=3600;//600sを指定
   ts.tv_nsec=0;//0nsを指定
  
   while(1){

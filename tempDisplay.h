@@ -34,7 +34,7 @@
 #define GREENPIN 3
 #define REDPIN 5
 #define BLUEPIN 4
-
+#define RELAYPIN 0
 
 #define LCD_ADDRESS  (0b0111110)
 #define MPL115A2_ADR (0b1100000)
